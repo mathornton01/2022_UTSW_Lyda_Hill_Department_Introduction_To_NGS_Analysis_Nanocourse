@@ -1,0 +1,369 @@
+<!doctype html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>NGS Nanocourse at UT Southwestern Medical Center, Dallas, Texas</title>
+  <meta name="description" content="Nano Courses"/>
+  <meta name="keywords" content=""/>
+  <meta name="robots" content=""/>
+  <link rel="canonical" href=""/>
+  
+  
+  <meta name="HandheldFriendly" content="True"/>
+  <meta name="MobileOptimized" content="320"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+   <body>
+     <h1>Introduction to NGS analysis (5/27/2022)</h1>
+     <p>
+
+<h3><font color="blue">Your account and password are trainXX and passwordXX, respectively.</font></h3>
+
+Today we are going to:
+<ul>
+  <li>Learn sequence alignment algorithms (raw reference, k-mer table, suffix array, BWT-FM index, and GBWT index)</li> <br>
+  <li>Align genomic sequences to the human reference genome</li> <br>
+  <li>Examine alignments using samtools</li> <br>
+  <li>Examine alignments in IGV</li> <br>
+  <li>Align RNA sequences to the mouse reference genome</li> <br>
+  <li>Examine alignments in IGV</li> <br>
+</ul>
+
+First, we will log into a compute node after installing a necessary package: <br>
+<p>
+  <ol>
+    <li>Open <a href="https://portal.biohpc.swmed.edu/accounts/login/?next=terminal/webgui/">https://portal.biohpc.swmed.edu/accounts/login/?next=terminal/webgui/</a> using a web browser</li> <br>
+    <li>Input your training ID (e.g. trainXX) and password </li> <br>
+    <li>Click the Launch Job button on the bottom to launch your web visualization GUI</li> <br>
+  </ol>
+<p>
+
+Note: The Linux commands shown in <font color="red">red</font> need to be executed correctly in your home directory, while the other commands shown in black are optional for practice. <p>
+
+List of Linux commands<br>
+<p>
+  <ol>
+    <li>
+      Show the current working directory <br>
+      <code> pwd </code>
+    </li> <br>
+    <li>
+      Change directory to /usr <br>
+      <code> cd /usr </code>
+    </li> <br>
+    <li>
+      Change directory to /archive/nanocourse/sequence_analysis/trainXX, where trainXX is your account<br>
+      <code> cd /archive/nanocourse/sequence_analysis/trainXX </code>
+    </li> <br>
+    <li>
+      Change directory to your home directory <br>
+      <code> cd ~ </code>
+    </li> <br>
+    <li>
+      Show files under the current directory <br>
+      <code> ls -l </code>
+    </li> <br>
+    <li>¯
+      Show the files used in the morning session <br>
+      <code> ls -l /archive/nanocourse/sequence_analysis/shared/session3 </code>
+    </li> <br>
+    <li>
+      Make a shortcut to the course files <br>
+      <font color="red">
+	<code> ln -s /archive/nanocourse/sequence_analysis/shared/session3 session3 </code>
+      </font>
+    </li> <br>
+  </ol>
+<p>
+
+  
+The file names and paths to the real <b>DNA</b> paired-end sequencing reads for this workshop are: <br>
+&emsp;session3/reads/L1903.R1.fastq.gz <br>
+&emsp;session3/reads/L1903.R2.fastq.gz <br>
+<br>
+
+To examine the files, you can optionally perform the following commands: <br>
+<p>
+  <ol>
+    <li>
+      Look at genomic regions where reads are sequenced<br>
+      <code> cat session3/etc/regions.txt </code>
+    </li> <br>
+    <li>
+      Extract a compressed read file and redirect to a text file <br>
+      <code> gzip -cd session3/reads/L1903.R1.fastq.gz > L1903.R1.fastq </code>
+    </li> <br>
+    <li>
+      Show the text file <br>
+      <code> cat L1903.R1.fastq </code>
+    </li> <br>
+    <li>
+      Show the first 10 lines of the read file <br>
+      <code> head L1903.R1.fastq </code>
+    </li> <br>
+    <li>
+      Show the first page of the read file (type <i>space</i> to go to the next page, and type <i>q</i> to quit) <br>
+      <code> less L1903.R1.fastq </code>
+    </li> <br>
+    <li>
+      Show the first page of the read file directly on the compressed file using pipe | <br>
+      <code> gzip -cd session3/reads/L1903.R1.fastq.gz | less </code>
+    </li> <br>
+    <li>
+      Count the number of lines of a read file <br>
+      <code> wc -l L1903.R1.fastq </code>
+    </li> <br>
+    <li>
+      Divide the number of lines we calculated above by 4 to get the number of reads <br>
+      <code> expr 2019172 / 4 </code>
+    </li> <br>
+  </ol>
+<p>  
+
+Now we are going to run our alignment using the paired-end reads against hg38 (the alignment step using HISAT2 might take about one minute) <br>
+<p>
+  <ol>
+    <li>
+      We will use HISAT2 with a graph index to align reads as follows: <br>
+      <font color="red">
+	<code> session3/programs/hisat2 --no-spliced-alignment -x session3/indexes/human/genome_snp -1 session3/reads/L1903.R1.fastq.gz -2 session3/reads/L1903.R2.fastq.gz > L1903.sam </code>
+      </font>
+    </li> <br>
+    <li>
+      As an alternative, you can use Bowtie2 as follows (the process may take about XX minutes): <br>
+      <code> session3/programs/bowtie2 -x session3/indexes/human/genome -1 session3/reads/L1903.R1.fastq.gz -2 session3/reads/L1903.R2.fastq.gz > L1903.bowtie2.sam </code>
+    </li> <br>
+    <li>
+      You can also use BWA-mem as follows (the process may take about XX minutes): <br>
+      <code> session3/programs/bwa mem -M session3/indexes/human/genome.fa session3/reads/L1903.R1.fastq.gz session3/reads/L1903.R2.fastq.gz > L1903.bwamem.sam </code>
+    </li> <br>
+  </ol>
+<p>
+
+Next we will view the results of the alignment using samtools in two different formats - SAM (Sequence Alignment & Mapping) and BAM (Binary version of SAM):
+<p>
+  <ol>
+    <li>
+      Look at the SAM file (use <i> space </i> to go to next page and <i> q </i> to quit) <br>
+      <code> less L1903.sam </code>
+    </li> <br>
+    <li>
+      Convert the SAM file into a BAM file <br>
+      <font color="red">
+	<code> session3/programs/samtools view -bS L1903.sam > L1903.unsorted.bam </code>
+      </font>
+    </li> <br>
+    <li>
+      Create a sorted BAM file <br>
+      <font color="red">
+	<code> session3/programs/samtools sort L1903.unsorted.bam -o L1903.sorted.bam </code>
+      </font>
+    </li> <br>
+    <li>
+      Make an index for the sorted BAM file <br>
+      <font color="red">
+	<code> session3/programs/samtools index L1903.sorted.bam </code>
+      </font>
+    </li> <br>
+    <li>
+      Look at alignments between 114,709,902 and 114,709,964 on Chromosome 1 <br>
+      <code> session3/programs/samtools view L1903.sorted.bam 1:114,709,902-114,709,964 </code>
+    </li> <br>
+    <li>
+      Look at bases of reads at a particular locus to identify variants <br>
+      <code> session3/programs/samtools mpileup -f session3/indexes/human/genome_snp.fa -r 1:114,709,902-114,709,964 L1903.sorted.bam </code>
+    </li> <br>
+  </ol>
+<p>    
+
+Now we will look at the alignment using IGV (Integrative Genomics Viewer): <p>
+<ol>       
+  <li>
+    Run IGV <br>
+    <font color="red">
+      <code> module add IGV/2.3.90 </code> <br>
+      <code> igv.sh </code> <br>
+    </font>
+  </li><br>
+  <li>
+    Load the genome using: Genomes -> Load from Server -> Select Human (hg38)<br>
+  </li> <br>
+  <li>
+    Open the BAM file using File -> Load From File in IGV and choose L1903.sorted.bam<br>
+  </li> <br>
+</ol>
+
+Try to answer the following questions:<br>
+<ol>
+<li>Look at the region: 1:114,709,933-114,709,995</li> <br>
+  <ol>
+    <li>Can you see an SNV?</li> <br>
+    <li>At what position?</li> <br>
+    <li>How many reads support the alt allele?</li> <br>
+    <li>How many reads support the ref allele?</li> <br>
+    <li>Which gene is this region a part of?</li> <br>
+  </ol>
+
+<li>Can you identify ethnicity?</li> <br>
+  <ul>
+    <li>
+      Please refer to Figure 3 in the following paper: <br>
+      <a href="https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-015-2328-0">Tao Huang et al. 2015, Genetic differences among ethnic groups</a> 
+    </li> <br>
+    <li>
+      When you search SNP location and allele frequency (e.g., rs6023406), use the dbSNP database at <a href="https://www.ncbi.nlm.nih.gov/snp">here</a>
+    </li> <br>
+  </ul>
+
+<li>Can you identify eye color?</li> <br>
+  <ul>
+    <li>
+      Please refer to Table 1 in the following paper: <br>
+      <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3057002/pdf/439_2010_Article_939.pdf">Branicki et al. 2011, Model-based prediction of human hair color using DNA variants</a> 
+    </li> <br>
+  </ul>
+
+<li>Can you identify hair color?</li> <br>
+  <ul>
+    <li>
+      Please refer to Table 2 in the following paper: <br>
+      <a href="https://www.sciencedirect.com/science/article/pii/S1872497310001717?casa_token=iaK_PoBbpWkAAAAA:wOh2kUT40v7QPVi23PzkZPk_-FAfw1NEWSc84B55GYKbyb1vp-wqF4hMgoFU0qagVSxw-gTEgw">Spichenok et al. 2010, Prediction of eye and skin color in diverse populations using seven SNPs</a> 
+    </li> <br>
+  </ul>
+
+
+
+<li>If you have time, examine these other positions: </li> <br>
+  <ol>
+    <li>7:55,160,108-55,160,350</li> <br>
+    <li>9:5,077,429-5,077,606</li> <br>
+    <li>13:28,035,912-28,036,086</li> <br>
+    <li>15:66,444,636-66,444,740</li> <br>
+    <li>19:49,478,873-49,479,065</li> <br>
+    </ol>
+</ol>
+<p>
+
+
+The file name and path to the real <b>RNA</b> single-end sequencing reads for this workshop is: <br>
+&emsp;session3/reads/RNA.heart.e11.rep1.fastq.gz <br> <br>
+To examine the file, you can optionally perform the following commands: <br>
+<p>
+  <ol>
+    <li>
+      Extract a compressed read file and redirect to a text file <br>
+      <code> gzip -cd session3/reads/RNA.heart.e11.rep1.fastq.gz > RNA.heart.e11.rep1.fastq </code>
+    </li> <br>
+    <li>
+      Display the text file; to stop the command, type <i>ctrl+c</i><br>
+      <code> cat RNA.heart.e11.rep1.fastq </code>
+    </li> <br>
+    <li>
+      Display the first 10 lines of the read file <br>
+      <code> head RNA.heart.e11.rep1.fastq </code>
+    </li> <br>
+    <li>
+      Display the first page of the read file; type <i>space</i> to go to the next page, and type <i>q</i> to quit <br>
+      <code> less RNA.heart.e11.rep1.fastq </code>
+    </li> <br>
+    <li>
+      Display the first page of the read file directly on the compressed file using pipe | <br>
+      <code> gzip -cd session3/reads/RNA.heart.e11.rep1.fastq.gz | less </code>
+    </li> <br>
+    <li>
+      Count the number of lines in a read file <br>
+      <code> wc -l RNA.heart.e11.rep1.fastq </code>
+    </li> <br>
+    <li>
+      Divide the number of lines we calculated above by 4 to get the number of reads <br>
+      <code> expr 113425724 / 4 </code>
+    </li> <br>
+  </ol>
+<p>
+
+ Now we are going to run our alignment using the single-end reads against the mouse genome, mm10 (this alignment step using HISAT2 might take 15 to 20 minutes) <br>
+<p>
+  <ol>
+    <li>
+      We will use HISAT2 with a graph index to align reads as follows: <br>
+      <font color="red">
+        <code> session3/programs/hisat2 -p 8 -x session3/indexes/mouse/genome_snp_tran -U session3/reads/RNA.heart.e11.rep1.fastq.gz > heart.e11.sam </code> <br> 
+      </font>
+    </li> <br>
+  </ol>
+<p>
+
+Next we will view the results of the alignment using samtools in two different formats - SAM (Sequence Alignment & Mapping) and BAM (Binary version of SAM):
+<p>
+  <ol>
+    <li>
+      Look at the SAM file (use <i> space </i> to go to the next page and <i> q </i> to quit) <br>
+      <code> less heart.e11.sam </code>
+    </li> <br>
+    <li>
+      Convert the SAM file into a BAM file <br>
+      <font color="red">
+        <code> session3/programs/samtools view -@ 8 -bS heart.e11.sam > heart.e11.unsorted.bam </code> <br>
+      </font>
+    </li> <br>
+    <li>
+      Create a sorted BAM file <br>
+      <font color="red">
+        <code> session3/programs/samtools sort -@ 8 heart.e11.unsorted.bam -o heart.e11.sorted.bam </code> <br>
+      </font>
+    </li> <br>
+    <li>
+      Make an index for the sorted BAM file <br>
+      <font color="red">
+        <code> session3/programs/samtools index heart.e11.sorted.bam </code> <br>
+      </font>
+    </li> <br>
+    <li>
+      Look at the sorted alignments <br>
+      <code> session3/programs/samtools view heart.e11.sorted.bam | less </code>
+    </li> <br>
+    <li>
+      Look at alignments between 61,989,341 and 61,990,361 on Chromosome 15 <br>
+      <code> session3/programs/samtools view heart.e11.sorted.bam 15:61,989,341-61,990,361 </code>
+    </li> <br>
+
+    <li>
+      Look at bases of reads located at a particular locus to identify variants  <br>
+      <code> session3/programs/samtools mpileup -f session3/indexes/mouse/genome.fa -r 15:61,989,341-61,990,361 heart.e11.sorted.bam </code>
+    </li><br>
+  </ol>
+<p>    
+
+Now we will look at the alignment using IGV (Integrative Genomics Viewer): <p>
+<ol>       
+  <li>
+    Run IGV <br>
+    <font color="red">
+      <code> module add IGV/2.3.90 </code> <br>
+      <code> igv.sh </code> <br>
+    </font>
+  </li><br>
+  <li>
+    Load the genome using: Genomes -> Load from Server -> Select Mouse mm10<br>
+  </li> <br>
+  <li>
+    Open the BAM file using File -> Load From File in IGV and choose heart.e11.sorted.bam <br>
+  </li> <br>
+</ol>
+
+Try to answer the following questions:<br>
+<ol>
+<li>Look at the region: 2:208,245,395-208,245,533</li> <br>
+  <ol>
+    <li>Can you see an indel?</li> <br>
+    <li>At what positions?</li> <br>
+    <li>How many reads support the alt allele?</li> <br>
+    <li>How many reads support the ref allele?</li> <br>
+    <li>Which gene is this region a part of?</li> <br>
+    <li>Is the indel an insertion or a deletion?</li> <br>
+    <li>Is the indel in an exon or an intron?</li> <br>
+  </ol>
+</ol>
+     <p>
+       
+</html>
+
